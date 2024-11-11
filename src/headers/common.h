@@ -13,12 +13,13 @@ typedef Tins::HWAddress<6> MACAddress;
 
 class CommandArgs {
 public:
-    char *interfaceName{};
-    char *serverIp{};
-    int serverPort{};
-    int attackDuration{};
+    int attack_thread_count{};
+    char *interface_name{};
+    char *server_ip{};
+    int server_port{};
+    int attack_duration{};
     CommandArgs();
-    CommandArgs(char* interfaceName, char* serverIp, int serverPort, int attackDuration);
+    CommandArgs(char* interface_name, int attack_thread_count, char* server_ip, int server_port, int attack_duration);
 };
 
 class GlobalArgs {

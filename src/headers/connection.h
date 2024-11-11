@@ -7,6 +7,8 @@
 
 #include <tins/tins.h>
 
-void connection_exhausted_attack();
+void connection_exhausted_attack_single_process();
+
+void connection_exhausted_attack_multiple_processes();
 
 #endif //TCP_OFF_PATH_CONNECTION_H
