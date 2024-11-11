@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <sys/wait.h>
+#include <unistd.h>
 #include "common.h"
 #include "connection.h"
 #include "utils.h"
